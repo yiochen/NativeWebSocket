@@ -2,17 +2,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 using NativeWebSocket;
 
 public class Connection : MonoBehaviour
 {
   WebSocket websocket;
+  public InputField inputField;
 
   // Start is called before the first frame update
-  async void Start()
+  void Start()
   {
-    websocket = new WebSocket("ws://echo.websocket.org");
+    websocket = new WebSocket("ws://localhost:8080");
 
     websocket.OnOpen += () =>
     {
@@ -36,10 +38,17 @@ public class Connection : MonoBehaviour
       Debug.Log("Received OnMessage! (" + bytes.Length + " bytes) " + message);
     };
 
-    // Keep sending messages at every 0.3s
-    InvokeRepeating("SendWebSocketMessage", 0.0f, 0.3f);
 
-    await websocket.Connect();
+  }
+
+  public void Connect()
+  {
+    _ = websocket.Connect();
+  }
+
+  public void Disconnect()
+  {
+    _ = websocket.Close();
   }
 
   void Update()
@@ -49,20 +58,22 @@ public class Connection : MonoBehaviour
 #endif
   }
 
-  async void SendWebSocketMessage()
+  public async void SendWebSocketMessage()
   {
     if (websocket.State == WebSocketState.Open)
     {
-      // Sending bytes
-      await websocket.Send(new byte[] { 10, 20, 30 });
-
       // Sending plain text
-      await websocket.SendText("plain text message");
+      await websocket.SendText(inputField.text);
+    }
+    else
+    {
+      Debug.Log("Websocket state is not open");
     }
   }
 
   private async void OnApplicationQuit()
   {
+    Debug.Log("Quiting application, closing websocket");
     await websocket.Close();
   }
 }

@@ -447,6 +447,7 @@ namespace NativeWebSocket
     public void CancelConnection()
     {
       m_TokenSource?.Cancel();
+      m_TokenSource = null;
     }
 
     public async Task Connect()
@@ -469,22 +470,18 @@ namespace NativeWebSocket
         }
 
         await m_Socket.ConnectAsync(uri, m_CancellationToken);
-        OnOpen?.Invoke();
-
-        _ = Receive();
+        await new WaitForUpdate();
+        if (!m_CancellationToken.IsCancellationRequested)
+        {
+          OnOpen?.Invoke();
+          _ = Receive();
+        }
       }
       catch (Exception ex)
       {
+        Debug.Log("received connection error");
         OnError?.Invoke(ex.Message);
         OnClose?.Invoke(WebSocketCloseCode.Abnormal);
-      }
-      finally
-      {
-        if (m_Socket != null)
-        {
-          m_TokenSource.Cancel();
-          m_Socket.Dispose();
-        }
       }
     }
 
@@ -643,8 +640,11 @@ namespace NativeWebSocket
       {
         while (m_Socket.State == System.Net.WebSockets.WebSocketState.Open)
         {
+          if (m_CancellationToken.IsCancellationRequested)
+          {
+            break;
+          }
           WebSocketReceiveResult result = null;
-
           using (var ms = new MemoryStream())
           {
             do
@@ -677,9 +677,11 @@ namespace NativeWebSocket
           }
         }
       }
-      catch (Exception)
+      catch (Exception e)
       {
+        Debug.Log("Exception while waiting for messages: " + e.Message);
         m_TokenSource.Cancel();
+        m_TokenSource = null;
       }
       finally
       {
@@ -690,11 +692,17 @@ namespace NativeWebSocket
 
     public async Task Close()
     {
-      if (State == WebSocketState.Open)
+      if (State == WebSocketState.Open && !m_CancellationToken.IsCancellationRequested)
       {
         await m_Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, m_CancellationToken);
       }
+      m_Socket?.Dispose();
+      m_Socket = null;
+      m_TokenSource?.Cancel();
+      m_TokenSource = null;
     }
+
+
   }
 #endif
 
