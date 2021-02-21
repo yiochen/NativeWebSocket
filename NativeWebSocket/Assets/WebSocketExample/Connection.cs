@@ -12,8 +12,7 @@ public class Connection : MonoBehaviour
   // Start is called before the first frame update
   async void Start()
   {
-    // websocket = new WebSocket("ws://echo.websocket.org");
-    websocket = new WebSocket("ws://localhost:8080");
+    websocket = new WebSocket("ws://echo.websocket.org");
 
     websocket.OnOpen += () =>
     {
@@ -45,9 +44,9 @@ public class Connection : MonoBehaviour
 
   void Update()
   {
-    #if !UNITY_WEBGL || UNITY_EDITOR
-      websocket.DispatchMessageQueue();
-    #endif
+#if !UNITY_WEBGL || UNITY_EDITOR
+    websocket.DispatchMessageQueue();
+#endif
   }
 
   async void SendWebSocketMessage()
